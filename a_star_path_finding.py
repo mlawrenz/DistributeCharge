@@ -1,13 +1,16 @@
 import heapq
+import numpy, pylab
 
 class Cell(object):
-    def __init__(self, x, y):
+    def __init__(self, x, y, reachable):
         """
         Initialize new cell
 
         @param x cell x coordinate
         @param y cell y coordinate
+        @param reachable is cell reachable? not a wall?
         """
+        self.reachable = reachable
         self.x = x
         self.y = y
         self.parent = None
@@ -23,18 +26,27 @@ class AStar(object):
         self.cells = []
         self.grid_height = 6
         self.grid_width = 6
+        self.result=[]
 
     def init_grid(self):
-        basic = ((0, 5), (1, 0), (1, 1), (1, 5), (2, 3), 
+        walls = ((0, 5), (1, 0), (1, 1), (1, 5), (2, 3), 
                  (3, 1), (3, 2), (3, 5), (4, 1), (4, 4), (5, 1))
         for x in range(self.grid_width):
             for y in range(self.grid_height):
-                if (x, y) in basic:
-                    self.cells.append(Cell(x, y))
-        self.start=self.cells[0]
-        self.end=self.cells[-1]
+                if (x, y) in walls:
+                    reachable = False
+                else:
+                    reachable = True
+                self.cells.append(Cell(x, y, reachable))
+        self.start = self.get_cell(0, 0)
+        self.end = self.get_cell(5, 5)
+        self.H=numpy.zeros((6,6))
+        for coor in walls:
+            ind1=coor[0]
+            ind2=coor[1]
+            self.H[ind1,ind2]=0.5
 
-    def get_heuristic(self, cell1, cell2):
+    def get_heuristic(self, cell):
         """
         Compute the heuristic value H for a cell: distance between
         this cell and the ending cell multiply by 10.
@@ -42,7 +54,7 @@ class AStar(object):
         @param cell
         @returns heuristic value H
         """
-        return numpy.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2)
+        return 10 * (abs(cell.x - self.end.x) + abs(cell.y - self.end.y))
 
     def get_cell(self, x, y):
         """
@@ -77,6 +89,7 @@ class AStar(object):
         cell = self.end
         while cell.parent is not self.start:
             cell = cell.parent
+            self.result.append((cell.x, cell.y))
             print 'path: cell: %d,%d' % (cell.x, cell.y)
 
     def compare(self, cell1, cell2):
@@ -100,10 +113,10 @@ class AStar(object):
         @param adj adjacent cell to current cell
         @param cell current cell being processed
         """
-        adj.g = cell.g*-1
-        adj.h = self.get_heuristic(adj, cell)
+        adj.g = cell.g + 10
+        adj.h = self.get_heuristic(adj)
         adj.parent = cell
-        adj.f = -1*(adj.h + adj.g)
+        adj.f = adj.h + adj.g
 
     def process(self):
         # add starting cell to open heap queue
@@ -114,18 +127,38 @@ class AStar(object):
             # add cell to closed list so we don't process it twice
             self.closed.add(cell)
             # if ending cell, display found path
-            #check distance to all other cells
+            if cell is self.end:
+                self.display_path()
+                break
             # get adjacent cells for cell
-            for (adj_cell.f, adj_cell) in self.opened:
-                self.update_cell(adj_cell, cell)
-                if adj_cell.g < cell.g:
-                    # add adj cell to open list
-                    heapq.heappush(self.opened, (adj_cell.f, adj_cell))
-                else:
-                    pass
-        self.display_path()
+            adj_cells = self.get_adjacent_cells(cell)
+            for adj_cell in adj_cells:
+                if adj_cell.reachable and adj_cell not in self.closed:
+                    if (adj_cell.f, adj_cell) in self.opened:
+                        # if adj cell in open list, check if current path is
+                        # better than the one previously found
+                        # for this adj cell.
+                        if adj_cell.g > cell.g + 10:
+                            self.update_cell(adj_cell, cell)
+                    else:
+                        self.update_cell(adj_cell, cell)
+                        # add adj cell to open list
+                        heapq.heappush(self.opened, (adj_cell.f, adj_cell))
+
+    def visualize(self):
+        #visualize test
+        pylab.figure()
+        for result in self.result:
+            ind1=result[0]
+            ind2=result[1]
+            self.H[ind1,ind2]=1.0
+        pylab.pcolor(self.H)
+        pylab.colorbar()
+        pylab.show()
+
 
 a = AStar()
 a.init_grid()
 a.process()
+a.visualize()
 

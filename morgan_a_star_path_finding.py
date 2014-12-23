@@ -26,21 +26,20 @@ class AStar(object):
         self.closed = []
         #heapq._heapify_max(self.opened)
         self.cells = []
+        self.opened = []
         self.results=[]
         self.basic=basic
 
     def init_grid(self, reinitial=False):
         # want to assign 4 charges to the gridpoints
         n=0
-        #self.opened = []
         for (n, cell) in enumerate(self.basic):
             x=cell[0]
             y=cell[1]
-            self.cells.append(Cell(x, y, cost=0, follow=0))
-            #if reinitial==True:
-            #    self.opened.append(Cell(x, y, cost=0, follow=0))
-            #else:
-            #    self.opened.append(Cell(x, y, cost=0, follow=0))
+            self.cells.append((x,y))
+            self.opened.append((x,y))
+            #self.cells.append(Cell(x, y, cost=0, follow=0))
+            #self.opened.append(Cell(x, y, cost=0, follow=0))
         self.start=self.cells[0]
         self.end=self.cells[-1]
 
@@ -52,61 +51,40 @@ class AStar(object):
         @param cell
         @returns heuristic value H
         """
-        return numpy.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2)
+        #return numpy.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2)
+        return numpy.sqrt((cell1[0] - cell2[0])**2 + (cell1[1] - cell2[1])**2)
 
 
     def process(self, nresidue):
         # start: looping through distance cells?
         # add tuples with (cost, cell1, cell2) for all unique combos
         #heapq.heappush(local_results, (-1*self.start.cost, (self.start.x, self.start.y)))
-        parent=self.start
         self.closed=[]
-        self.working=[]
-        for reference in self.cells:
+        reference=self.start
+        index=self.opened.index(reference)
+        self.opened.pop(index)
+        self.results.append(reference)
+        follow=0
+        while self.opened:
             cum_cost=0
-            if reference in self.closed:
-                continue
-            else:
-                self.working.append(reference)
-                self.closed.append(reference)
-            for next in self.cells:
+            for i in self.opened:
                 cost=0
-                for i in self.working:
-                    cost+=get_heuristic(next, i)
+                for reference in self.results:
+                    tmp_cost=self.get_heuristic(reference, i)
+                    if tmp_cost < 2:
+                        pass
+                    else:
+                        cost+=tmp_cost
                 if cost > cum_cost:
                     cum_cost=cost
-                    follow=next
-            self.working.append(follow)
-            self.closed.append(follow)
-            #local_results=[]
-            #heapq.heapify(local_results)
+                    follow=i
+            ind=self.opened.index(follow)
+            self.opened.pop(ind)
+            self.results.append(follow)
+        print self.results
                 
-            cost_list=[get_heuristic(reference, i) for i in self.opened]
-            while len(self.opened):
-                # pop cell from heap queue
-                next = self.opened.pop()
-                cost=self.get_heuristic(reference, next)
-                if self.closed.size:
-                    for extended in self.closed:
-                        cost+=self.get_heuristic(next, extended)
-                heapq.heappush(local_results, (-1*cost, (next.x, next.y)))
-            self.closed.append(reference)
-            best=[heapq.heappop(local_results) for _ in range(0, len(local_results))]
-            self.results.append(best[0])
         
-        #combos = itertools.combinations(self.cells, nresidue)
-        #for combo in combos:
-        #    cost=0
-        #    subcombos = itertools.combinations(combo, 2)
-        #    for subcombo in subcombos:
-        #        reference = combo[0]
-        #        next = combo[1]
-        #    # make negative to get min heap (hack)
-        #    heapq.heappush(self.opened, (-1*cost, [(i.x, i.y) for i in combo]))
-        #print "n= ", len(self.cells)
-        #self.results=results
-
-    def visualize(self, best, nresidue):
+    def visualize(self, nresidue):
         #visualize test
         pylab.figure()
         H=numpy.zeros((6,6))
@@ -115,14 +93,11 @@ class AStar(object):
             ind2=coor[1]
             H[ind1,ind2]=0.5
         rank=0
-        for result in best:
+        for result in self.results:
             rank+=1
-            n=1
-            while n < 3: 
-                ind1=result[n][0]
-                ind2=result[n][1]
-                H[ind1,ind2]=1.0
-                n+=1
+            ind1=result[0]
+            ind2=result[1]
+            H[ind1,ind2]=1.0
             if rank==nresidue:
                 break
         pylab.pcolor(H)
@@ -146,13 +121,13 @@ if __name__=="__main__":
             basic.append((i,j))
     #basic = ((0, 5), (1, 0), (1, 1), (1, 5), (2, 3), 
     #         (3, 1), (3, 2), (3, 5), (4, 1), (4, 4), (5, 1))
-    nresidue=5
+    nresidue=10
     a = AStar(basic)
     a.init_grid()
-    a.process(nresidue)
-    heapq.heapify(a.results)
-    best=[heapq.heappop(a.results) for _ in range(0, len(a.results))]
-    print best
     import pdb
     pdb.set_trace()
-    a.visualize(best, nresidue)
+    a.process(nresidue)
+    #heapq.heapify(a.results)
+    #best=[heapq.heappop(a.results) for _ in range(0, len(a.results))]
+    #print best
+    a.visualize(nresidue)
