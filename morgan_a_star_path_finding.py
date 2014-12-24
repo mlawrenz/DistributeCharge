@@ -72,15 +72,18 @@ class AStar(object):
                 for reference in self.results:
                     tmp_cost=self.get_heuristic(reference, i)
                     if tmp_cost < 2:
-                        pass
+                        break
                     else:
                         cost+=tmp_cost
                 if cost > cum_cost:
                     cum_cost=cost
                     follow=i
-            ind=self.opened.index(follow)
-            self.opened.pop(ind)
-            self.results.append(follow)
+            if follow not in self.opened:
+                break
+            else:
+                ind=self.opened.index(follow)
+                self.opened.pop(ind)
+                self.results.append(follow)
         print self.results
                 
         
@@ -121,11 +124,9 @@ if __name__=="__main__":
             basic.append((i,j))
     #basic = ((0, 5), (1, 0), (1, 1), (1, 5), (2, 3), 
     #         (3, 1), (3, 2), (3, 5), (4, 1), (4, 4), (5, 1))
-    nresidue=10
+    nresidue=6
     a = AStar(basic)
     a.init_grid()
-    import pdb
-    pdb.set_trace()
     a.process(nresidue)
     #heapq.heapify(a.results)
     #best=[heapq.heappop(a.results) for _ in range(0, len(a.results))]
