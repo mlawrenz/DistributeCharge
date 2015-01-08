@@ -6,19 +6,18 @@ import itertools
 import pylab
 
 class Cell(object):
-    def __init__(self, x, y, cost, follow):
+    def __init__(self, x, y, z, id):
         """
         Initialize new cell
 
         @param x cell x coordinate
         @param y cell y coordinate
-        
-        @param distance is distance to reference at a given time
+        @param z cell z coordinate
         """
-        self.cost = cost
-        self.follow=follow
         self.x = x
         self.y = y
+        self.z = z
+        self.id = id
 
 
 
@@ -38,12 +37,10 @@ class AStar(object):
             x=cell[0]
             y=cell[1]
             z=cell[2]
-            self.cells.append((x,y,z))
-            self.opened.append((x,y,z))
-            #self.cells.append(Cell(x, y, cost=0, follow=0))
-            #self.opened.append(Cell(x, y, cost=0, follow=0))
-        self.start=self.cells[0]
-        self.end=self.cells[-1]
+            index=n
+            self.cells.append(Cell(x, y, z, n))
+            self.opened.append(Cell(x, y, z, n))
+        return
 
     def get_heuristic(self, cell1, cell2):
         """
@@ -54,7 +51,7 @@ class AStar(object):
         @returns heuristic value H
         """
         #return numpy.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2)
-        r=numpy.sqrt((cell1[0] - cell2[0])**2 + (cell1[1] - cell2[1])**2+((cell1[2] - cell2[2])**2))
+        r=numpy.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2+((cell1.z - cell2.z)**2))
         force=1.0/(r**2)
         return force
 
@@ -64,14 +61,13 @@ class AStar(object):
         # add tuples with (cost, cell1, cell2) for all unique combos
         #heapq.heappush(local_results, (-1*self.start.cost, (self.start.x, self.start.y)))
         self.closed=[]
-        reference=self.start
-        index=self.opened.index(reference)
-        self.opened.pop(index)
+        reference=self.cells[0]
+        self.opened.pop(0)
         self.results.append(reference)
         follow=0
         while self.opened:
             cum_cost=10000
-            for cell in self.opened:
+            for (index, cell) in enumerate(self.opened):
                 cost_array=[self.get_heuristic(reference, cell) for reference in self.results]
                 if sum(cost_array) == cum_cost:
                     print "equal:", cell, follow
@@ -79,13 +75,13 @@ class AStar(object):
                     cum_cost=sum(cost_array)
                     follow=cell
             if follow not in self.opened:
+                print "BREAKING"
                 break # no more choices at a lower cost
-            ind=self.opened.index(follow)
-            self.opened.pop(ind)
+            self.opened.pop(index)
             self.results.append(follow)
             if len(self.results)==nresidue:
                 break
-        print self.results
+        print [(i.x, i.y, i.z, i.id) for i in self.results]
                 
         
     def visualize3d(self):
@@ -94,9 +90,9 @@ class AStar(object):
         ax=fig.add_subplot(111, projection='3d')
         H=numpy.zeros((6,6,6))
         ax = fig.add_subplot(111, projection='3d')
-        x=[i[0] for i in self.results]
-        y=[i[1] for i in self.results]
-        z=[i[2] for i in self.results]
+        x=[i.x for i in self.results]
+        y=[i.y for i in self.results]
+        z=[i.z for i in self.results]
         #ax.scatter(xs, ys, zs, c=c, marker=m)
         ax.scatter(x, y, z)
         #pylab.colorbar()
@@ -123,8 +119,5 @@ if __name__=="__main__":
     a = AStar(basic)
     a.init_grid()
     a.process(nresidue)
-    #heapq.heapify(a.results)
-    #best=[heapq.heappop(a.results) for _ in range(0, len(a.results))]
-    #print best
     a.visualize3d()
 
