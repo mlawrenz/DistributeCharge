@@ -24,22 +24,21 @@ class Cell(object):
 class AStar(object):
     def __init__(self, basic):
         self.closed = []
-        #heapq._heapify_max(self.opened)
-        self.cells = []
         self.opened = []
         self.results=[]
+        self.cells=[]
         self.basic=basic
 
     def init_grid(self, reinitial=False):
-        # want to assign 4 charges to the gridpoints
+        # want to assign the gridpoints
         n=0
         for (n, cell) in enumerate(self.basic):
             x=cell[0]
             y=cell[1]
             z=cell[2]
             index=n
-            self.cells.append(Cell(x, y, z, n))
             self.opened.append(Cell(x, y, z, n))
+            self.cells.append(Cell(x, y, z, n))
         return
 
     def get_heuristic(self, cell1, cell2):
@@ -61,7 +60,7 @@ class AStar(object):
         # add tuples with (cost, cell1, cell2) for all unique combos
         #heapq.heappush(local_results, (-1*self.start.cost, (self.start.x, self.start.y)))
         self.closed=[]
-        reference=self.cells[0]
+        reference=self.opened[0]
         self.opened.pop(0)
         self.results.append(reference)
         follow=0
@@ -90,12 +89,14 @@ class AStar(object):
         ax=fig.add_subplot(111, projection='3d')
         H=numpy.zeros((6,6,6))
         ax = fig.add_subplot(111, projection='3d')
-        x=[i.x for i in self.results]
-        y=[i.y for i in self.results]
-        z=[i.z for i in self.results]
-        #ax.scatter(xs, ys, zs, c=c, marker=m)
-        ax.scatter(x, y, z)
-        #pylab.colorbar()
+        x_r=[i.x for i in self.results]
+        y_r=[i.y for i in self.results]
+        z_r=[i.z for i in self.results]
+        x_b=[i.x for i in self.cells]
+        y_b=[i.y for i in self.cells]
+        z_b=[i.z for i in self.cells]
+        ax.scatter(x_b, y_b, z_b, alpha=0.5, c='k', marker='o')
+        ax.scatter(x_r, y_r, z_r, alpha=1.0, c='r', marker='o')
         pylab.show()
 
 def parse_cmdln():
@@ -108,16 +109,17 @@ def parse_cmdln():
 
 if __name__=="__main__":
     #(options,args)=parse_cmdln()
-    basic=[]
-    for i in range(0,6):
-        for j in range(0,6):
-            for k in range(0,6):
-                basic.append((i,j,k))
-    #basic = ((0, 5), (1, 0), (1, 1), (1, 5), (2, 3), 
-    #         (3, 1), (3, 2), (3, 5), (4, 1), (4, 4), (5, 1))
-    nresidue=6
+    #basic=[]
+    #for i in range(0,6):
+    #    for j in range(0,6):
+    #        for k in range(0,6):
+    #            basic.append((i,j,k))
+    basic = ((0, 5, 2), (1, 0 , 1), (1, 1, 1), (1, 5, 4), (2, 3, 3), 
+             (3, 1, 4), (3, 2, 1), (3, 5, 1), (4, 1, 2), (4, 4, 4), (5, 1, 2))
+    nresidue=3
     a = AStar(basic)
     a.init_grid()
     a.process(nresidue)
     a.visualize3d()
+
 
