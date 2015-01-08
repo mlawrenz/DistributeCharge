@@ -34,9 +34,9 @@ class AStar(object):
         for x in range(self.grid_width):
             for y in range(self.grid_height):
                 if (x, y) in walls:
-                    reachable = False
-                else:
                     reachable = True
+                else:
+                    reachable = False
                 self.cells.append(Cell(x, y, reachable))
         self.start = self.get_cell(0, 0)
         self.end = self.get_cell(5, 5)
@@ -90,7 +90,7 @@ class AStar(object):
         while cell.parent is not self.start:
             cell = cell.parent
             self.result.append((cell.x, cell.y))
-            print 'path: cell: %d,%d %s' % (cell.x, cell.y, cell.f)
+            print 'path: cell: %d,%d cost %s' % (cell.x, cell.y, cell.f)
 
     def compare(self, cell1, cell2):
         """
@@ -121,8 +121,6 @@ class AStar(object):
     def process(self):
         # add starting cell to open heap queue
         heapq.heappush(self.opened, (self.start.f, self.start))
-        import pdb
-        pdb.set_trace()
         while len(self.opened):
             # pop cell from heap queue 
             f, cell = heapq.heappop(self.opened)
