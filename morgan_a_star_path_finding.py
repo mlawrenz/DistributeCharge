@@ -1,6 +1,7 @@
 import heapq
 import optparse
 import numpy, pylab
+from mpl_toolkits.mplot3d import Axes3D
 import itertools
 import pylab
 
@@ -36,8 +37,9 @@ class AStar(object):
         for (n, cell) in enumerate(self.basic):
             x=cell[0]
             y=cell[1]
-            self.cells.append((x,y))
-            self.opened.append((x,y))
+            z=cell[2]
+            self.cells.append((x,y,z))
+            self.opened.append((x,y,z))
             #self.cells.append(Cell(x, y, cost=0, follow=0))
             #self.opened.append(Cell(x, y, cost=0, follow=0))
         self.start=self.cells[0]
@@ -52,7 +54,7 @@ class AStar(object):
         @returns heuristic value H
         """
         #return numpy.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2)
-        r=numpy.sqrt((cell1[0] - cell2[0])**2 + (cell1[1] - cell2[1])**2)
+        r=numpy.sqrt((cell1[0] - cell2[0])**2 + (cell1[1] - cell2[1])**2+((cell1[2] - cell2[2])**2))
         force=1.0/(r**2)
         return force
 
@@ -86,23 +88,18 @@ class AStar(object):
         print self.results
                 
         
-    def visualize(self):
+    def visualize3d(self):
         #visualize test
-        pylab.figure()
-        H=numpy.zeros((6,6))
-        for coor in self.basic:
-            ind1=coor[0]
-            ind2=coor[1]
-            H[ind1,ind2]=0.5
-        rank=0
-        for result in self.results:
-            rank+=1
-            ind1=result[0]
-            ind2=result[1]
-            H[ind1,ind2]=1.0
-        pylab.pcolor(H)
-        pylab.colorbar()
-        pylab.title('config %s' % rank)
+        fig=pylab.figure()
+        ax=fig.add_subplot(111, projection='3d')
+        H=numpy.zeros((6,6,6))
+        ax = fig.add_subplot(111, projection='3d')
+        x=[i[0] for i in self.results]
+        y=[i[1] for i in self.results]
+        z=[i[2] for i in self.results]
+        #ax.scatter(xs, ys, zs, c=c, marker=m)
+        ax.scatter(x, y, z)
+        #pylab.colorbar()
         pylab.show()
 
 def parse_cmdln():
@@ -118,7 +115,8 @@ if __name__=="__main__":
     basic=[]
     for i in range(0,6):
         for j in range(0,6):
-            basic.append((i,j))
+            for k in range(0,6):
+                basic.append((i,j,k))
     #basic = ((0, 5), (1, 0), (1, 1), (1, 5), (2, 3), 
     #         (3, 1), (3, 2), (3, 5), (4, 1), (4, 4), (5, 1))
     nresidue=6
@@ -128,4 +126,5 @@ if __name__=="__main__":
     #heapq.heapify(a.results)
     #best=[heapq.heappop(a.results) for _ in range(0, len(a.results))]
     #print best
-    a.visualize()
+    a.visualize3d()
+
