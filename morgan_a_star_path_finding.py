@@ -68,14 +68,17 @@ class AStar(object):
             cum_cost=10000
             for (index, cell) in enumerate(self.opened):
                 cost_array=[self.get_heuristic(reference, cell) for reference in self.results]
+                print (cell.x, cell.y, cell.z), cost_array
                 if sum(cost_array) == cum_cost:
                     print "equal:", cell, follow
-                if sum(cost_array) < cum_cost: #minimie columbic repulsive force
-                    cum_cost=sum(cost_array)
+                total=sum(cost_array)
+                if total < cum_cost: #minimize total columbic repulsive force
+                    cum_cost=total
                     follow=cell
             if follow not in self.opened:
                 print "BREAKING"
                 break # no more choices at a lower cost
+            print "FOLLOW:", (follow.x, follow.y, follow.z)
             self.opened.pop(index)
             self.results.append(follow)
             if len(self.results)==nresidue:
@@ -116,7 +119,8 @@ if __name__=="__main__":
     #            basic.append((i,j,k))
     basic = ((0, 5, 2), (1, 0 , 1), (1, 1, 1), (1, 5, 4), (2, 3, 3), 
              (3, 1, 4), (3, 2, 1), (3, 5, 1), (4, 1, 2), (4, 4, 4), (5, 1, 2))
-    nresidue=3
+    nresidue=4
+    print basic
     a = AStar(basic)
     a.init_grid()
     a.process(nresidue)
