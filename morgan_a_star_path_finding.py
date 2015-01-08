@@ -81,10 +81,12 @@ class AStar(object):
             ind=self.opened.index(follow)
             self.opened.pop(ind)
             self.results.append(follow)
+            if len(self.results)==nresidue:
+                break
         print self.results
                 
         
-    def visualize(self, nresidue):
+    def visualize(self):
         #visualize test
         pylab.figure()
         H=numpy.zeros((6,6))
@@ -98,8 +100,6 @@ class AStar(object):
             ind1=result[0]
             ind2=result[1]
             H[ind1,ind2]=1.0
-            if rank==nresidue:
-                break
         pylab.pcolor(H)
         pylab.colorbar()
         pylab.title('config %s' % rank)
@@ -128,4 +128,4 @@ if __name__=="__main__":
     #heapq.heapify(a.results)
     #best=[heapq.heappop(a.results) for _ in range(0, len(a.results))]
     #print best
-    a.visualize(nresidue)
+    a.visualize()
