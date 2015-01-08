@@ -52,7 +52,9 @@ class AStar(object):
         @returns heuristic value H
         """
         #return numpy.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2)
-        return numpy.sqrt((cell1[0] - cell2[0])**2 + (cell1[1] - cell2[1])**2)
+        r=numpy.sqrt((cell1[0] - cell2[0])**2 + (cell1[1] - cell2[1])**2)
+        force=1.0/(r**2)
+        return force
 
 
     def process(self, nresidue):
@@ -66,24 +68,19 @@ class AStar(object):
         self.results.append(reference)
         follow=0
         while self.opened:
-            cum_cost=0
-            for i in self.opened:
-                cost=0
-                for reference in self.results:
-                    tmp_cost=self.get_heuristic(reference, i)
-                    if tmp_cost < 2:
-                        break
-                    else:
-                        cost+=tmp_cost
-                if cost > cum_cost:
-                    cum_cost=cost
-                    follow=i
+            cum_cost=10000
+            for cell in self.opened:
+                cost_array=[self.get_heuristic(reference, cell) for reference in self.results]
+                if sum(cost_array) == cum_cost:
+                    print "equal:", cell, follow
+                if sum(cost_array) < cum_cost: #minimie columbic repulsive force
+                    cum_cost=sum(cost_array)
+                    follow=cell
             if follow not in self.opened:
-                break
-            else:
-                ind=self.opened.index(follow)
-                self.opened.pop(ind)
-                self.results.append(follow)
+                break # no more choices at a lower cost
+            ind=self.opened.index(follow)
+            self.opened.pop(ind)
+            self.results.append(follow)
         print self.results
                 
         
