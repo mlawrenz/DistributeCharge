@@ -72,7 +72,7 @@ class AStar(object):
             self.results.append(follow)
             if len(self.results)==nresidue:
                 break
-        print [(i.x, i.y, i.z, i.pdbnum, i.sasa) for i in self.results]
+        print [(i.pdbnum, i.sasa) for i in self.results]
         return
                 
         
