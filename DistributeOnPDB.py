@@ -1,5 +1,4 @@
-import heapq
-import optparse
+import sys
 import numpy, pylab
 from mpl_toolkits.mplot3d import Axes3D
 import itertools
@@ -12,7 +11,7 @@ import pylab
 
 
 class Cell(object):
-    def __init__(self, x, y, z, id, name):
+    def __init__(self, x, y, z, id, name, pdbnum):
         """
         Initialize new cell
 
@@ -24,6 +23,7 @@ class Cell(object):
         self.y = y
         self.z = z
         self.id = id
+        self.pdbnum=pdbnum
         self.name=name
 
 
@@ -107,17 +107,35 @@ def find_basic(pdbfile):
             x=float(line.split()[6])
             y=float(line.split()[7])
             z=float(line.split()[8])
+            pdbnum=int(line.split()[5]) # need to add a check for columns
+            try:
+                int(pdbnum)
+            except ValueError:
+                print "PDB needs chain column"
+                sys.exit()
             if 'HET' in line.split()[0]:
-                type=line.split()[0]
-                resname=line.split()[3]
                 resid+=1
                 print "skipping unknown residue %s %s" % (type, resname)
             if type=='ATOM':
                 resid+=1
                 if atom == 'CA':
                     if resname in basic_resnames:
-                        basic.append(Cell(x, y, z, resid, resname))
+                        basic.append(Cell(x, y, z, resid, resname, pdbnum))
     return basic 
+
+
+def order_by_sasa(basic, sasa, res):
+    pdbnums=numpy.array([cell.pdbnum for cell in basic])
+    import heapq
+    basic_reordered=[]
+    heapq.heapify(basic_reordered)
+    for cell in basic:
+        location=numpy.where(res==basic.pdbnum)[0]
+        heapq.heappush(basic_reordered, (sasa[location], cell))
+
+    for residue in basic:
+    
+
 
 def parse_cmdln():
     import argparse
@@ -130,6 +148,8 @@ def parse_cmdln():
 if __name__=="__main__":
     args=parse_cmdln()
     basic=find_basic(args.pdb)
+    res=numpy.loadtxt('residue_sasa.dat', usecols=(0,), dtype=int)
+    sasa=numpy.loadtxt('residue_sasa.dat', usecols=(1,))
     print [(i.id, i.name) for i in basic]
     nresidue=int(args.nresidue)
     a = AStar(basic)
