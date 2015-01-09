@@ -62,6 +62,8 @@ class AStar(object):
             for (index, cell) in enumerate(self.opened):
                 cost_array=[self.get_heuristic(reference, cell) for reference in self.results]
                 total=sum(cost_array)
+                if cell.sasa < 100:
+                    continue
                 if total < cum_cost: #minimize total columbic repulsive force
                     cum_cost=total
                     follow=cell
