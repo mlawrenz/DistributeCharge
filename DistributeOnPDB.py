@@ -100,27 +100,27 @@ def find_basic(pdbfile):
     resid=0
     basic_resnames=['ARG', 'LYS', 'HIS', 'HIE', 'HIP', 'HID']
     for line in fhandle.readlines():
-        if len(line.split()) > 10:
-            type=line.split()[0]
+        if 'HET' in line.split()[0]:
+            resid+=1
+            continue
+            print "skipping unknown residue %s %s" % (type, resname)
+        type=line.split()[0]
+        if type=='ATOM': # parse normal PDB line
             atom=line.split()[2]
             resname=line.split()[3]
             x=float(line.split()[6])
             y=float(line.split()[7])
             z=float(line.split()[8])
-            pdbnum=int(line.split()[5]) # need to add a check for columns
             try:
-                int(pdbnum)
+                int(line.split()[4])
+                pdbnum=int(line.split()[4]) # a check for columns
             except ValueError:
-                print "PDB needs chain column"
-                sys.exit()
-            if 'HET' in line.split()[0]:
+                print "PDB contains chain column"
+                pdbnum=int(line.split()[5]) # a check for columns
+            if atom == 'CA': #only count alpha carbond
                 resid+=1
-                print "skipping unknown residue %s %s" % (type, resname)
-            if type=='ATOM':
-                if atom == 'CA':
-                    resid+=1
-                    if resname in basic_resnames:
-                        basic.append(Cell(x, y, z, resid, resname, pdbnum))
+                if resname in basic_resnames:
+                    basic.append(Cell(x, y, z, resid, resname, pdbnum))
     return basic 
 
 

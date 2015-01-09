@@ -1,6 +1,6 @@
 
 
-mol load pdb test.pdb
+mol load pdb ubiquitin.amber.pdb
 set all [ atomselect top "all" ]
 set residues [ lsort -unique [ $all get resid ] ]
 set filename "residue_sasa.dat"
