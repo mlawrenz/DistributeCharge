@@ -11,7 +11,7 @@ import pylab
 
 
 class Cell(object):
-    def __init__(self, x, y, z, id, name, pdbnum):
+    def __init__(self, x, y, z, id, resname, pdbnum, sasa=None):
         """
         Initialize new cell
 
@@ -24,7 +24,8 @@ class Cell(object):
         self.z = z
         self.id = id
         self.pdbnum=pdbnum
-        self.name=name
+        self.resname=resname
+        self.sasa=sasa
 
 
 
@@ -60,22 +61,19 @@ class AStar(object):
             cum_cost=10000
             for (index, cell) in enumerate(self.opened):
                 cost_array=[self.get_heuristic(reference, cell) for reference in self.results]
-                print (cell.x, cell.y, cell.z), cost_array
-                if sum(cost_array) == cum_cost:
-                    print "equal:", cell, follow
                 total=sum(cost_array)
                 if total < cum_cost: #minimize total columbic repulsive force
                     cum_cost=total
                     follow=cell
             if follow not in self.opened:
-                print "BREAKING"
+                print "NO MORE CHOICES AT LOW COST"
                 break # no more choices at a lower cost
-            print "FOLLOW:", (follow.x, follow.y, follow.z)
             self.opened.pop(index)
             self.results.append(follow)
             if len(self.results)==nresidue:
                 break
-        print [(i.x, i.y, i.z, i.id) for i in self.results]
+        print [(i.x, i.y, i.z, i.pdbnum, i.sasa) for i in self.results]
+        return
                 
         
     def visualize3d(self):
@@ -117,23 +115,26 @@ def find_basic(pdbfile):
                 resid+=1
                 print "skipping unknown residue %s %s" % (type, resname)
             if type=='ATOM':
-                resid+=1
                 if atom == 'CA':
+                    resid+=1
                     if resname in basic_resnames:
                         basic.append(Cell(x, y, z, resid, resname, pdbnum))
     return basic 
 
 
-def order_by_sasa(basic, sasa, res):
-    pdbnums=numpy.array([cell.pdbnum for cell in basic])
+def order_by_sasa(basic, sasa_list, res):
     import heapq
     basic_reordered=[]
-    heapq.heapify(basic_reordered)
+    heapq.heapify(basic_reordered) # use heap to keep ordering of sasa 
     for cell in basic:
-        location=numpy.where(res==basic.pdbnum)[0]
-        heapq.heappush(basic_reordered, (sasa[location], cell))
-
-    for residue in basic:
+        location=numpy.where(res==cell.pdbnum)[0]
+        cell.sasa=sasa_list[location][0]
+        heapq.heappush(basic_reordered, (-1*sasa_list[location][0], cell)) #use (-1)*sasa bc its a min_heap
+    surface_basic=[]
+    while basic_reordered:
+        sasa, cell=heapq.heappop(basic_reordered)
+        surface_basic.append(cell)
+    return surface_basic
     
 
 
@@ -149,8 +150,10 @@ if __name__=="__main__":
     args=parse_cmdln()
     basic=find_basic(args.pdb)
     res=numpy.loadtxt('residue_sasa.dat', usecols=(0,), dtype=int)
-    sasa=numpy.loadtxt('residue_sasa.dat', usecols=(1,))
-    print [(i.id, i.name) for i in basic]
+    sasa_list=numpy.loadtxt('residue_sasa.dat', usecols=(1,))
+    basic=order_by_sasa(basic, sasa_list, res)
+    #print "-----------------------------------"
+    #print [(i.pdbnum, i.resname, i.sasa) for i in basic]
     nresidue=int(args.nresidue)
     a = AStar(basic)
     a.process(nresidue)
