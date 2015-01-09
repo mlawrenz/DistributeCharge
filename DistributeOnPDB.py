@@ -74,8 +74,8 @@ class AStar(object):
             self.results.append(follow)
             if len(self.results)==nresidue:
                 break
-        print [(i.pdbnum, i.sasa) for i in self.results]
-        return
+        final=[(i.pdbnum, i.sasa) for i in self.results]
+        return final
                 
         
     def visualize3d(self):
@@ -158,7 +158,8 @@ if __name__=="__main__":
     #print [(i.pdbnum, i.resname, i.sasa) for i in basic]
     nresidue=int(args.nresidue)
     a = AStar(basic)
-    a.process(nresidue)
-    a.visualize3d()
+    final=a.process(nresidue)
+    numpy.savetxt('%s_charge_basic_sasa.dat' % args.pdb.split('.pdb')[0], final, fmt='%i')
+    #a.visualize3d()
 
 
