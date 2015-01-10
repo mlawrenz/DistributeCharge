@@ -138,8 +138,6 @@ def order_by_sasa(basic, sasa_list, res):
         surface_basic.append(cell)
     return surface_basic
     
-
-
 def parse_cmdln():
     import argparse
     parser = argparse.ArgumentParser(description='Process some integers.')
