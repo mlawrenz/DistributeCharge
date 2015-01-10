@@ -11,7 +11,7 @@ import pylab
 
 
 class Cell(object):
-    def __init__(self, x, y, z, id, resname, pdbnum, sasa=None):
+    def __init__(self, x, y, z, id, resname, pdbnum, pka, sasa=None):
         """
         Initialize new cell
 
@@ -26,6 +26,7 @@ class Cell(object):
         self.pdbnum=pdbnum
         self.resname=resname
         self.sasa=sasa
+        self.pka=pka
 
 
 
@@ -56,20 +57,29 @@ class AStar(object):
         reference=self.opened[0]
         self.opened.pop(0)
         self.results.append(reference)
+        mostbasic=len([i for i in basic if i.pka=='high'])
         follow=0
+        histidines=False
         while self.opened:
             cum_cost=10000
             for (index, cell) in enumerate(self.opened):
                 cost_array=[self.get_heuristic(reference, cell) for reference in self.results]
                 total=sum(cost_array)
+                if histidines==False:
+                    if cell.pka=='low':
+                        continue
                 if cell.sasa < 100:
                     continue
                 if total < cum_cost: #minimize total columbic repulsive force
                     cum_cost=total
                     follow=cell
             if follow not in self.opened:
-                print "NO MORE CHOICES AT LOW COST"
-                break # no more choices at a lower cost
+                if histidines==False:
+                    histidines=True
+                    continue
+                else:
+                    print "NO MORE CHOICES AT LOW COST"
+                    break # no more choices at a lower cost
             self.opened.pop(index)
             self.results.append(follow)
             if len(self.results)==nresidue:
@@ -98,7 +108,8 @@ def find_basic(pdbfile):
     basic=[]
     fhandle=open(pdbfile)
     resid=0
-    basic_resnames=['ARG', 'LYS', 'HIS', 'HIE', 'HIP', 'HID']
+    most_basic_resnames=['ARG', 'LYS', 'HIS', 'HIE', 'HIP', 'HID']
+    less_basic_resnames=['HIS', 'HIE', 'HIP', 'HID']
     for line in fhandle.readlines():
         if 'HET' in line.split()[0]:
             resid+=1
@@ -119,8 +130,14 @@ def find_basic(pdbfile):
                 pdbnum=int(line.split()[5]) # a check for columns
             if atom == 'CA': #only count alpha carbond
                 resid+=1
-                if resname in basic_resnames:
-                    basic.append(Cell(x, y, z, resid, resname, pdbnum))
+                if resname in most_basic_resnames:
+                    basic.append(Cell(x, y, z, resid, resname, pdbnum, 'high'))
+                elif resname in less_basic_resnames:
+                    basic.append(Cell(x, y, z, resid, resname, pdbnum, 'low'))
+                else:
+                    pass
+            else:
+                pass
     return basic 
 
 
@@ -152,8 +169,8 @@ if __name__=="__main__":
     res=numpy.loadtxt('residue_sasa.dat', usecols=(0,), dtype=int)
     sasa_list=numpy.loadtxt('residue_sasa.dat', usecols=(1,))
     basic=order_by_sasa(basic, sasa_list, res)
-    #print "-----------------------------------"
-    #print [(i.pdbnum, i.resname, i.sasa) for i in basic]
+    print "-----------------------------------"
+    print [(i.pdbnum, i.resname, i.sasa) for i in basic]
     nresidue=int(args.nresidue)
     a = AStar(basic)
     final=a.process(nresidue)
