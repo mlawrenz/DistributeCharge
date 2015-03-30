@@ -109,7 +109,7 @@ def find_basic(pdbfile):
     fhandle=open(pdbfile)
     resid=0
     most_basic_resnames=['ARG', 'LYS', 'HIS', 'HIE', 'HIP', 'HID']
-    less_basic_resnames=['HIS', 'HIE', 'HIP', 'HID']
+    less_basic_resnames=['HIS', 'HIE', 'HIP', 'HID', 'ASP', 'GLU']
     for line in fhandle.readlines():
         if 'HET' in line.split()[0]:
             resid+=1
@@ -170,7 +170,8 @@ if __name__=="__main__":
     sasa_list=numpy.loadtxt('residue_sasa.dat', usecols=(1,))
     basic=order_by_sasa(basic, sasa_list, res)
     print "-----------------------------------"
-    print [(i.pdbnum, i.resname, i.sasa) for i in basic]
+    for i in basic:
+        print (i.pdbnum, i.resname, i.sasa) 
     nresidue=int(args.nresidue)
     a = AStar(basic)
     final=a.process(nresidue)
