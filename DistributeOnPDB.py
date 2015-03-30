@@ -158,7 +158,7 @@ def order_by_sasa(list, sasa_list, res):
 def parse_cmdln():
     import argparse
     parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('-n','--netcharge',dest='netcharge', help='charge on the surface')
+    parser.add_argument('-n','--input_charge',dest='input_charge', help='charge on the surface')
     parser.add_argument('-p','--pdb',dest='pdb', help='PDB file to be parsed for basic residues')
     args = parser.parse_args()
     return args
@@ -191,6 +191,9 @@ def print_charge_change(filename, array1, array2=0):
 if __name__=="__main__":
     args=parse_cmdln()
     orig_basic, orig_acidic, orig_intermed, charge,=find_basic(args.pdb)
+    if 'CytC' in args.pdb: # add for HEME
+        "ADDING -2 for CytC"
+        charge=charge-2
     print "solution charge is %s" % charge
     maxcharge=charge+len(orig_intermed)
     print "all basic sites charge is %s" % maxcharge
@@ -199,14 +202,14 @@ if __name__=="__main__":
     basic=order_by_sasa(orig_basic, sasa_list, res)
     acidic=order_by_sasa(orig_acidic, sasa_list, res)
     intermed=order_by_sasa(orig_intermed, sasa_list, res)
-    netcharge=int(args.netcharge)
-    if netcharge==charge:
+    input_charge=int(args.input_charge)
+    if input_charge==charge:
         print "SAME CHARGE AS SOLUTION"
         sys.exit()
-    if netcharge > maxcharge: # not enough basic charges to add
+    if input_charge > maxcharge: # not enough basic charges to add
         print "need to neutralize acidic sites, reduce negative"
         a = AStar(acidic)
-        target=(netcharge-maxcharge)
+        target=(input_charge-maxcharge)
         prot_acidic=a.process(target)
         print "protonate all %s basic residues: " % len(basic)
         #print [(i.pdbnum, i.resname, i.sasa) for i in basic]
@@ -216,10 +219,10 @@ if __name__=="__main__":
         #print [(i.pdbnum, i.resname, i.sasa) for i in prot_acidic ]
         print_charge_change(args.pdb, intermed, prot_acidic)
         sys.exit()
-    if netcharge < maxcharge and netcharge > charge:
+    if input_charge < maxcharge and input_charge > charge:
         print "add protonated histidines"
         a = AStar(intermed)
-        target=(netcharge-charge)
+        target=(input_charge-charge)
         prot_hist=a.process(target)
         print "protonate all %s basic residues: " % len(basic)
         #print [(i.pdbnum, i.resname, i.sasa) for i in basic]
@@ -227,15 +230,14 @@ if __name__=="__main__":
         #print [(i.pdbnum, i.resname, i.sasa) for i in prot_hist ]
         print_charge_change(args.pdb, prot_hist)
         sys.exit()
-    if netcharge < charge: #too many highly basic charges
+    if input_charge < charge: #too many highly basic charges
         print "need to neutralize basic sites, add positive"
         a = AStar(basic)
-        only_basic=a.process(netcharge)
+        only_basic=a.process(input_charge)
         print "only protonate these %s basic residues: " % len(only_basic)
-        print [(i.pdbnum, i.resname, i.sasa) for i in only_basic ]
-        print "check on converting to neutral lysines"
+        only_lys=[i for i in only_basic if i.resname=='LYS' ]
+        print_charge_change(args.pdb, only_lys)
         sys.exit()
-    #numpy.savetxt('%s_charge_basic_sasa.dat' % args.pdb.split('.pdb')[0], final, fmt='%i')
     #a.visualize3d()
 
 
