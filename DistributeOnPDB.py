@@ -31,11 +31,11 @@ class Cell(object):
 
 
 class AStar(object):
-    def __init__(self, basic):
+    def __init__(self, residues):
         self.opened = []
         self.results=[]
-        self.basic=basic
-        self.opened=basic
+        self.residues=residues
+        self.opened=residues
 
     def get_heuristic(self, cell1, cell2):
         """
@@ -57,35 +57,23 @@ class AStar(object):
         reference=self.opened[0]
         self.opened.pop(0)
         self.results.append(reference)
-        mostbasic=len([i for i in basic if i.pka=='high'])
         follow=0
-        histidines=False
         while self.opened:
             cum_cost=10000
             for (index, cell) in enumerate(self.opened):
                 cost_array=[self.get_heuristic(reference, cell) for reference in self.results]
                 total=sum(cost_array)
-                if histidines==False:
-                    if cell.pka=='low':
-                        continue
-                if cell.sasa < 100:
-                    continue
                 if total < cum_cost: #minimize total columbic repulsive force
                     cum_cost=total
                     follow=cell
             if follow not in self.opened:
-                if histidines==False:
-                    histidines=True
-                    continue
-                else:
-                    print "NO MORE CHOICES AT LOW COST"
-                    break # no more choices at a lower cost
+                print "NO MORE CHOICES AT LOW COST"
+                break # no more choices at a lower cost
             self.opened.pop(index)
             self.results.append(follow)
             if len(self.results)==nresidue:
                 break
-        final=[(i.pdbnum, i.sasa) for i in self.results]
-        return final
+        return self.results
                 
         
     def visualize3d(self):
@@ -106,10 +94,14 @@ class AStar(object):
 
 def find_basic(pdbfile):
     basic=[]
+    acidic=[]
+    intermed=[]
     fhandle=open(pdbfile)
     resid=0
-    most_basic_resnames=['ARG', 'LYS', 'HIS', 'HIE', 'HIP', 'HID']
-    less_basic_resnames=['HIS', 'HIE', 'HIP', 'HID', 'ASP', 'GLU']
+    charge=0
+    basic_charge=0
+    basic_resnames=['ARG', 'LYS', 'HIS', 'HIE', 'HIP', 'HID']
+    acidic_resnames=['ASP', 'GLU']
     for line in fhandle.readlines():
         if 'HET' in line.split()[0]:
             resid+=1
@@ -130,52 +122,119 @@ def find_basic(pdbfile):
                 pdbnum=int(line.split()[5]) # a check for columns
             if atom == 'CA': #only count alpha carbond
                 resid+=1
-                if resname in most_basic_resnames:
-                    basic.append(Cell(x, y, z, resid, resname, pdbnum, 'high'))
-                elif resname in less_basic_resnames:
-                    basic.append(Cell(x, y, z, resid, resname, pdbnum, 'low'))
+                if resname in basic_resnames:
+                    if resname=='ARG' or resname=='LYS':
+                        charge+=1
+                        basic.append(Cell(x, y, z, resid, resname, pdbnum, 'high'))
+                    else:
+                        intermed.append(Cell(x, y, z, resid, resname, pdbnum, 'low'))
+                elif resname in acidic_resnames:
+                    if resname=='GLU' or resname=='ASP':
+                        charge+=-1
+                    acidic.append(Cell(x, y, z, resid, resname, pdbnum, 'low'))
                 else:
                     pass
             else:
                 pass
-    return basic 
+    return basic, acidic, intermed, charge,
 
 
-def order_by_sasa(basic, sasa_list, res):
+def order_by_sasa(list, sasa_list, res):
     import heapq
-    basic_reordered=[]
-    heapq.heapify(basic_reordered) # use heap to keep ordering of sasa 
-    for cell in basic:
+    reordered=[]
+    heapq.heapify(reordered) # use heap to keep ordering of sasa 
+    for cell in list:
         location=numpy.where(res==cell.pdbnum)[0]
         cell.sasa=sasa_list[location][0]
-        heapq.heappush(basic_reordered, (-1*sasa_list[location][0], cell)) #use (-1)*sasa bc its a min_heap
-    surface_basic=[]
-    while basic_reordered:
-        sasa, cell=heapq.heappop(basic_reordered)
-        surface_basic.append(cell)
-    return surface_basic
+        if cell.sasa==0:
+            continue
+        heapq.heappush(reordered, (-1*sasa_list[location][0], cell)) #use (-1)*sasa bc its a min_heap
+    surface=[]
+    while reordered:
+        sasa, cell=heapq.heappop(reordered)
+        surface.append(cell)
+    return surface
     
 def parse_cmdln():
     import argparse
     parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('-n','--nresidue',dest='nresidue', help='num. basic residues to be charges on the surface')
+    parser.add_argument('-n','--netcharge',dest='netcharge', help='charge on the surface')
     parser.add_argument('-p','--pdb',dest='pdb', help='PDB file to be parsed for basic residues')
     args = parser.parse_args()
     return args
 
+def print_charge_change(filename, array1, array2=0):
+    file=open('charge.sh', 'w')
+    if array2!=0:
+        loops=[array1, array2]
+    else:
+        loops=[array1,]
+    for loop in loops:
+        for res in loop:
+            if 'HI' in res.resname:
+                target='HIP'
+            if res.resname=='ASP':
+                target='ASH'
+            if res.resname=='GLU':
+                target='GLH'
+            if res.pdbnum > 9:
+                if res.pdbnum > 99:
+                    file.write('sed -i "s/%s X %s/%s X %s/g" noh-%s\n' % (res.resname, res.pdbnum, target, res.pdbnum, filename))
+                else:
+                    file.write('sed -i "s/%s X  %s/%s X  %s/g" noh-%s\n' % (res.resname, res.pdbnum, target, res.pdbnum, filename))
+            else:
+                file.write('sed -i "s/%s X   %s/%s X   %s/g" noh-%s\n' % (res.resname, res.pdbnum, target, res.pdbnum, filename))
+    file.close()
+    print "wrote sed file for %s" % filename
+
+
 if __name__=="__main__":
     args=parse_cmdln()
-    basic=find_basic(args.pdb)
+    orig_basic, orig_acidic, orig_intermed, charge,=find_basic(args.pdb)
+    import pdb
+    pdb.set_trace()
+    print "solution charge is %s" % charge
+    maxcharge=charge+len(orig_intermed)
+    print "all basic sites charge is %s" % maxcharge
     res=numpy.loadtxt('residue_sasa.dat', usecols=(0,), dtype=int)
     sasa_list=numpy.loadtxt('residue_sasa.dat', usecols=(1,))
-    basic=order_by_sasa(basic, sasa_list, res)
-    print "-----------------------------------"
-    for i in basic:
-        print (i.pdbnum, i.resname, i.sasa) 
-    nresidue=int(args.nresidue)
-    a = AStar(basic)
-    final=a.process(nresidue)
-    numpy.savetxt('%s_charge_basic_sasa.dat' % args.pdb.split('.pdb')[0], final, fmt='%i')
+    basic=order_by_sasa(orig_basic, sasa_list, res)
+    acidic=order_by_sasa(orig_acidic, sasa_list, res)
+    intermed=order_by_sasa(orig_intermed, sasa_list, res)
+    netcharge=int(args.netcharge)
+    if netcharge > maxcharge: # not enough basic charges to add
+        print "need to neutralize acidic sites, reduce negative"
+        a = AStar(acidic)
+        target=netcharge-maxcharge
+        prot_acidic=a.process(target)
+        print "protonate all basic residues: "
+        print [(i.pdbnum, i.resname, i.sasa) for i in basic]
+        print "protonate all histidine residues: "
+        print [(i.pdbnum, i.resname, i.sasa) for i in intermed]
+        print "protonate these acidic residues: "
+        print [(i.pdbnum, i.resname, i.sasa) for i in prot_acidic ]
+        print_charge_change(args.pdb, intermed, prot_acidic)
+        sys.exit()
+    if netcharge < maxcharge and netcharge > charge:
+        print "add protonated histidines"
+        a = AStar(intermed)
+        target=netcharge-charge
+        prot_hist=a.process(target)
+        print "protonate all basic residues: "
+        print [(i.pdbnum, i.resname, i.sasa) for i in basic]
+        print "protonate all histidine residues: "
+        print [(i.pdbnum, i.resname, i.sasa) for i in prot_hist ]
+        print_charge_change(args.pdb, prot_hist)
+        sys.exit()
+    if netcharge < charge: #too many highly basic charges
+        print "need to neutralize basic sites, add positive"
+        a = AStar(basic)
+        only_basic=a.process(netcharge)
+        print "only protonate these basic residues: "
+        print [(i.pdbnum, i.resname, i.sasa) for i in only_basic ]
+        print "check on converting to neutral lysines"
+        sys.exit()
+    #numpy.savetxt('%s_charge_basic_sasa.dat' % args.pdb.split('.pdb')[0], final, fmt='%i')
     #a.visualize3d()
 
 
