@@ -191,8 +191,6 @@ def print_charge_change(filename, array1, array2=0):
 if __name__=="__main__":
     args=parse_cmdln()
     orig_basic, orig_acidic, orig_intermed, charge,=find_basic(args.pdb)
-    import pdb
-    pdb.set_trace()
     print "solution charge is %s" % charge
     maxcharge=charge+len(orig_intermed)
     print "all basic sites charge is %s" % maxcharge
@@ -202,35 +200,38 @@ if __name__=="__main__":
     acidic=order_by_sasa(orig_acidic, sasa_list, res)
     intermed=order_by_sasa(orig_intermed, sasa_list, res)
     netcharge=int(args.netcharge)
+    if netcharge==charge:
+        print "SAME CHARGE AS SOLUTION"
+        sys.exit()
     if netcharge > maxcharge: # not enough basic charges to add
         print "need to neutralize acidic sites, reduce negative"
         a = AStar(acidic)
-        target=netcharge-maxcharge
+        target=(netcharge-maxcharge)
         prot_acidic=a.process(target)
-        print "protonate all basic residues: "
-        print [(i.pdbnum, i.resname, i.sasa) for i in basic]
-        print "protonate all histidine residues: "
-        print [(i.pdbnum, i.resname, i.sasa) for i in intermed]
-        print "protonate these acidic residues: "
-        print [(i.pdbnum, i.resname, i.sasa) for i in prot_acidic ]
+        print "protonate all %s basic residues: " % len(basic)
+        #print [(i.pdbnum, i.resname, i.sasa) for i in basic]
+        print "protonate all %s histidine residues: " % len(intermed)
+        #print [(i.pdbnum, i.resname, i.sasa) for i in intermed]
+        print "protonate these %s acidic residues out of %s: " % (len(prot_acidic), len(orig_acidic))
+        #print [(i.pdbnum, i.resname, i.sasa) for i in prot_acidic ]
         print_charge_change(args.pdb, intermed, prot_acidic)
         sys.exit()
     if netcharge < maxcharge and netcharge > charge:
         print "add protonated histidines"
         a = AStar(intermed)
-        target=netcharge-charge
+        target=(netcharge-charge)
         prot_hist=a.process(target)
-        print "protonate all basic residues: "
-        print [(i.pdbnum, i.resname, i.sasa) for i in basic]
-        print "protonate all histidine residues: "
-        print [(i.pdbnum, i.resname, i.sasa) for i in prot_hist ]
+        print "protonate all %s basic residues: " % len(basic)
+        #print [(i.pdbnum, i.resname, i.sasa) for i in basic]
+        print "protonate these %s histidine residues: " % len(prot_hist)
+        #print [(i.pdbnum, i.resname, i.sasa) for i in prot_hist ]
         print_charge_change(args.pdb, prot_hist)
         sys.exit()
     if netcharge < charge: #too many highly basic charges
         print "need to neutralize basic sites, add positive"
         a = AStar(basic)
         only_basic=a.process(netcharge)
-        print "only protonate these basic residues: "
+        print "only protonate these %s basic residues: " % len(only_basic)
         print [(i.pdbnum, i.resname, i.sasa) for i in only_basic ]
         print "check on converting to neutral lysines"
         sys.exit()
