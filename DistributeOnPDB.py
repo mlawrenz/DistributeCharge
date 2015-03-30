@@ -159,7 +159,8 @@ def parse_cmdln():
     import argparse
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('-n','--input_charge',dest='input_charge', help='charge on the surface')
-    parser.add_argument('-p','--pdb',dest='pdb', help='PDB file to be parsed for basic residues')
+    parser.add_argument('-p','--pdb',dest='pdb', help='PDB file to be parsed for charge assignment')
+    parser.add_argument('-s','--sasa',dest='sasa', help='per residue SASA for PDB file')
     args = parser.parse_args()
     return args
 
@@ -177,6 +178,8 @@ def print_charge_change(filename, array1, array2=0):
                 target='ASH'
             if res.resname=='GLU':
                 target='GLH'
+            if res.resname=='LYS':
+                target='LYN'
             if res.pdbnum > 9:
                 if res.pdbnum > 99:
                     file.write('sed -i "s/%s X %s/%s X %s/g" noh-%s\n' % (res.resname, res.pdbnum, target, res.pdbnum, filename))
@@ -198,7 +201,7 @@ if __name__=="__main__":
     maxcharge=charge+len(orig_intermed)
     print "all basic sites charge is %s" % maxcharge
     res=numpy.loadtxt('residue_sasa.dat', usecols=(0,), dtype=int)
-    sasa_list=numpy.loadtxt('residue_sasa.dat', usecols=(1,))
+    sasa_list=numpy.loadtxt(args.sasa, usecols=(1,))
     basic=order_by_sasa(orig_basic, sasa_list, res)
     acidic=order_by_sasa(orig_acidic, sasa_list, res)
     intermed=order_by_sasa(orig_intermed, sasa_list, res)

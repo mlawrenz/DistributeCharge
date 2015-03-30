@@ -1,6 +1,6 @@
 
 
-mol load pdb 1HRC-clean.pdb
+mol load pdb ../../cytoc.amber.pdb
 set all [ atomselect top "all" ]
 set residues [ lsort -unique [ $all get resid ] ]
 set filename "residue_sasa.dat"
