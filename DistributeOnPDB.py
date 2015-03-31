@@ -199,18 +199,18 @@ if __name__=="__main__":
     pdbfile=args.pdb
     orig_basic, orig_acidic, orig_intermed, charge,=find_basic(args.pdb)
     input_charge=int(args.input_charge)
-    maxcharge=charge+len(orig_intermed)
     if 'CytC' in pdbfile: # add for HEME
         "ADDING -2 for CytC"
         charge=charge-2
     print "target charge: %s" % input_charge
     print "solution charge: %s" % charge
-    print "all basic sites charge: %s" % maxcharge
     res=numpy.loadtxt(args.sasa, usecols=(0,), dtype=int)
     sasa_list=numpy.loadtxt(args.sasa, usecols=(1,))
     basic=order_by_sasa(orig_basic, sasa_list, res)
     acidic=order_by_sasa(orig_acidic, sasa_list, res)
     intermed=order_by_sasa(orig_intermed, sasa_list, res)
+    maxcharge=charge+len(intermed)
+    print "all basic sites charge: %s" % maxcharge
     if input_charge==charge:
         print "SAME CHARGE AS SOLUTION"
         sys.exit()
