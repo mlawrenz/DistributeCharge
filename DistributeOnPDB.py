@@ -59,6 +59,8 @@ class AStar(object):
         self.results.append(reference)
         follow=0
         while self.opened:
+            if len(self.results)==nresidue:
+                break
             cum_cost=10000
             for (index, cell) in enumerate(self.opened):
                 cost_array=[self.get_heuristic(reference, cell) for reference in self.results]
@@ -71,8 +73,6 @@ class AStar(object):
                 break # no more choices at a lower cost
             self.opened.pop(index)
             self.results.append(follow)
-            if len(self.results)==nresidue:
-                break
         return self.results
                 
         
@@ -182,7 +182,10 @@ def print_charge_change(filename, array1, array2=0):
                 target='LYN'
             if res.pdbnum > 9:
                 if res.pdbnum > 99:
-                    file.write('sed -i "s/%s X %s/%s X %s/g" noh-%s\n' % (res.resname, res.pdbnum, target, res.pdbnum, filename))
+                    if res.pdbnum > 999:
+                        file.write('sed -i "s/%s X%s/%s X%s/g" noh-%s\n' % (res.resname, res.pdbnum, target, res.pdbnum, filename))
+                    else:
+                        file.write('sed -i "s/%s X %s/%s X %s/g" noh-%s\n' % (res.resname, res.pdbnum, target, res.pdbnum, filename))
                 else:
                     file.write('sed -i "s/%s X  %s/%s X  %s/g" noh-%s\n' % (res.resname, res.pdbnum, target, res.pdbnum, filename))
             else:
@@ -193,19 +196,21 @@ def print_charge_change(filename, array1, array2=0):
 
 if __name__=="__main__":
     args=parse_cmdln()
+    pdbfile=args.pdb
     orig_basic, orig_acidic, orig_intermed, charge,=find_basic(args.pdb)
-    if 'CytC' in args.pdb: # add for HEME
+    input_charge=int(args.input_charge)
+    maxcharge=charge+len(orig_intermed)
+    if 'CytC' in pdbfile: # add for HEME
         "ADDING -2 for CytC"
         charge=charge-2
-    print "solution charge is %s" % charge
-    maxcharge=charge+len(orig_intermed)
-    print "all basic sites charge is %s" % maxcharge
-    res=numpy.loadtxt('residue_sasa.dat', usecols=(0,), dtype=int)
+    print "target charge: %s" % input_charge
+    print "solution charge: %s" % charge
+    print "all basic sites charge: %s" % maxcharge
+    res=numpy.loadtxt(args.sasa, usecols=(0,), dtype=int)
     sasa_list=numpy.loadtxt(args.sasa, usecols=(1,))
     basic=order_by_sasa(orig_basic, sasa_list, res)
     acidic=order_by_sasa(orig_acidic, sasa_list, res)
     intermed=order_by_sasa(orig_intermed, sasa_list, res)
-    input_charge=int(args.input_charge)
     if input_charge==charge:
         print "SAME CHARGE AS SOLUTION"
         sys.exit()
@@ -234,11 +239,12 @@ if __name__=="__main__":
         print_charge_change(args.pdb, prot_hist)
         sys.exit()
     if input_charge < charge: #too many highly basic charges
-        print "need to neutralize basic sites, add positive"
-        a = AStar(basic)
-        only_basic=a.process(input_charge)
-        print "only protonate these %s basic residues: " % len(only_basic)
-        only_lys=[i for i in only_basic if i.resname=='LYS' ]
+        print "need to neutralize basic sites, reduce positive"
+        basic_lys=[i for i in basic if i.resname=='LYS' ]
+        target=charge-input_charge
+        a = AStar(basic_lys)
+        only_lys=a.process(target)
+        print "only protonate these %s basic residues: " % len(only_lys)
         print_charge_change(args.pdb, only_lys)
         sys.exit()
     #a.visualize3d()
