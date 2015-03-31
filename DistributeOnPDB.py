@@ -111,15 +111,26 @@ def find_basic(pdbfile):
         if type=='ATOM': # parse normal PDB line
             atom=line.split()[2]
             resname=line.split()[3]
-            x=float(line.split()[6])
-            y=float(line.split()[7])
-            z=float(line.split()[8])
             try:
                 int(line.split()[4])
                 pdbnum=int(line.split()[4]) # a check for columns
+                x=float(line.split()[5])
+                try:
+                    y=float(line.split()[6])
+                    z=float(line.split()[7])
+                except ValueError:
+                    if len(line.split()[6].split('-'))==3:
+                        y=-1*float(line.split()[6].split('-')[1])
+                        z=-1*float(line.split()[6].split('-')[2])
+                    else:
+                        y=float(line.split()[6].split('-')[0])
+                        z=-1*float(line.split()[6].split('-')[1])
             except ValueError:
                 print "PDB contains chain column"
                 pdbnum=int(line.split()[5]) # a check for columns
+                x=float(line.split()[6])
+                y=float(line.split()[7])
+                z=float(line.split()[8])
             if atom == 'CA': #only count alpha carbond
                 resid+=1
                 if resname in basic_resnames:
@@ -190,6 +201,7 @@ def print_charge_change(filename, array1, array2=0):
                     file.write('sed -i "s/%s X  %s/%s X  %s/g" noh-%s\n' % (res.resname, res.pdbnum, target, res.pdbnum, filename))
             else:
                 file.write('sed -i "s/%s X   %s/%s X   %s/g" noh-%s\n' % (res.resname, res.pdbnum, target, res.pdbnum, filename))
+    file.write('sed -i "/OXT/a TER" noh-%s' % filename)
     file.close()
     print "wrote sed file for %s" % filename
 
@@ -233,14 +245,20 @@ if __name__=="__main__":
         target=(input_charge-charge)
         prot_hist=a.process(target)
         print "protonate all %s basic residues: " % len(basic)
-        #print [(i.pdbnum, i.resname, i.sasa) for i in basic]
         print "protonate these %s histidine residues: " % len(prot_hist)
-        #print [(i.pdbnum, i.resname, i.sasa) for i in prot_hist ]
-        print_charge_change(args.pdb, prot_hist)
+        if len(prot_hist) < target:
+            diff=target-len(prot_hist)
+            print "also need to protonate %s acidic, due to low SASA histidines" % diff
+            a = AStar(acidic)
+            prot_acidic=a.process(diff)
+            print_charge_change(args.pdb, prot_hist, prot_acidic)
+        else:
+            print_charge_change(args.pdb, prot_hist)
         sys.exit()
     if input_charge < charge: #too many highly basic charges
         print "need to neutralize basic sites, reduce positive"
         basic_lys=[i for i in basic if i.resname=='LYS' ]
+        basic_lys=[i for i in basic_lys if i.pdbnum!=1]
         target=charge-input_charge
         a = AStar(basic_lys)
         only_lys=a.process(target)
