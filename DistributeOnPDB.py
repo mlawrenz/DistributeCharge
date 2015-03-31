@@ -48,6 +48,8 @@ class AStar(object):
         #return numpy.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2)
         r=numpy.sqrt((cell1.x - cell2.x)**2 + (cell1.y - cell2.y)**2+((cell1.z - cell2.z)**2))
         force=1.0/(r**2)
+        if force==numpy.inf:
+            force=10000
         return force
 
 
@@ -71,6 +73,7 @@ class AStar(object):
             if follow not in self.opened:
                 print "NO MORE CHOICES AT LOW COST"
                 break # no more choices at a lower cost
+            index=self.opened.index(follow)
             self.opened.pop(index)
             self.results.append(follow)
         return self.results
@@ -239,7 +242,7 @@ if __name__=="__main__":
         #print [(i.pdbnum, i.resname, i.sasa) for i in prot_acidic ]
         print_charge_change(args.pdb, intermed, prot_acidic)
         sys.exit()
-    if input_charge < maxcharge and input_charge > charge:
+    if input_charge <= maxcharge and input_charge > charge:
         print "add protonated histidines"
         a = AStar(intermed)
         target=(input_charge-charge)
