@@ -1,4 +1,5 @@
 import sys
+import os
 import numpy, pylab
 from mpl_toolkits.mplot3d import Axes3D
 import itertools
@@ -215,7 +216,7 @@ if __name__=="__main__":
     orig_basic, orig_acidic, orig_intermed, charge,=find_basic(args.pdb)
     input_charge=int(args.input_charge)
     if 'CytC' in pdbfile: # add for HEME
-        "ADDING -2 for CytC"
+        print "ADDING -2 for CytC"
         charge=charge-2
     print "target charge: %s" % input_charge
     print "solution charge: %s" % charge
@@ -228,6 +229,10 @@ if __name__=="__main__":
     print "all basic sites charge: %s" % maxcharge
     if input_charge==charge:
         print "SAME CHARGE AS SOLUTION"
+        file=open('charge.sh', 'w')
+        file.write('sed -i "/OXT/a TER" noh-%s' % args.pdb)
+        file.close()
+        print "wrote sed file for %s" % args.pdb
         sys.exit()
     if input_charge > maxcharge: # not enough basic charges to add
         print "need to neutralize acidic sites, reduce negative"
