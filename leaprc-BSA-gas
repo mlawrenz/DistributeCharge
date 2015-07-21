@@ -1,0 +1,25 @@
+source leaprc.ff14SB
+source leaprc.gaff
+loadAmberParams frcmod.ionsjc_tip3p
+
+BSA=loadpdb charge-all-pdbs/noh-equil3-BSA-XXX.pdb
+bond BSA.366.SG BSA.357.SG
+bond BSA.313.SG BSA.358.SG
+bond BSA.262.SG BSA.276.SG
+bond BSA.286.SG BSA.275.SG
+bond BSA.165.SG BSA.174.SG
+bond BSA.166.SG BSA.121.SG
+bond BSA.51.SG BSA.60.SG
+bond BSA.434.SG BSA.445.SG
+bond BSA.435.SG BSA.389.SG
+bond BSA.556.SG BSA.511.SG
+bond BSA.555.SG BSA.564.SG
+bond BSA.484.SG BSA.473.SG
+bond BSA.474.SG BSA.458.SG
+bond BSA.197.SG BSA.243.SG
+bond BSA.250.SG BSA.242.SG
+bond BSA.88.SG BSA.99.SG
+bond BSA.89.SG BSA.73.SG
+saveAmberParm BSA BSA-XXX.top BSA-XXX.crd
+savepdb BSA BSA-XXX.amber.pdb
+
